@@ -1,0 +1,6 @@
+# Local preview tooling (machine-specific absolute paths)
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>siya — Spatial Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#06080F; --fg:#D6E2EC; --muted:#5d6b7a; --line:rgba(120,180,210,0.16); --accent:#5FE0E6; --warm:#F0A852; --panel:rgba(11,16,27,0.74); }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#06080F; }
+  ::selection{ background:var(--accent); color:#06080F; }
+  a{ -webkit-tap-highlight-color:transparent; }
+
+  @keyframes sp-radar{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  @keyframes sp-spin{ from{transform:rotateZ(0)} to{transform:rotateZ(360deg)} }
+  @keyframes sp-grid{ from{background-position:0 0} to{background-position:0 80px} }
+  @keyframes sp-scan{ from{transform:translateY(0)} to{transform:translateY(7px)} }
+  @keyframes sp-bob{ 0%,100%{transform:translateY(-4px)} 50%{transform:translateY(4px)} }
+  @keyframes sp-blink{ 0%,100%{opacity:1} 50%{opacity:.18} }
+  @keyframes sp-tw{ 0%,100%{opacity:.25} 50%{opacity:.9} }
+  @keyframes sp-rise{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+  .nav-a{ color:var(--muted); text-decoration:none; transition:color .25s; }
+  .nav-a:hover{ color:var(--accent); }
+  .node{ transition:border-color .3s, box-shadow .3s; }
+  .node:hover{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 0 34px -6px var(--accent); z-index:60; }
+  .node img{ transition:transform .5s ease, opacity .3s; }
+  .node:hover img{ transform:scale(1.06); opacity:1; }
+  .dance-tile{ transition:transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s; }
+  .dance-tile:hover{ transform:rotateY(0deg) translateY(-5px); box-shadow:0 0 0 1px var(--accent), 0 24px 48px -26px rgba(95,224,230,.5); }
+  .slot{ display:flex; align-items:center; justify-content:center; text-align:center; background:#0a0e18; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<div id="root" style="position:relative; background:var(--bg); color:var(--fg); font-family:'JetBrains Mono',ui-monospace,monospace; overflow-x:hidden;">
+
+  <!-- ============ HERO FIELD ============ -->
+  <section style="position:relative; height:100vh; min-height:680px; overflow:hidden; perspective:1300px; perspective-origin:50% 44%;">
+
+    <div aria-hidden="true" style="position:absolute; inset:0; z-index:0; background:radial-gradient(1px 1px at 18% 22%, rgba(180,220,235,.9), transparent), radial-gradient(1px 1px at 72% 16%, rgba(180,220,235,.7), transparent), radial-gradient(1.5px 1.5px at 38% 64%, rgba(150,200,220,.7), transparent), radial-gradient(1px 1px at 88% 72%, rgba(180,220,235,.8), transparent), radial-gradient(1px 1px at 58% 40%, rgba(150,200,220,.6), transparent), radial-gradient(1px 1px at 8% 80%, rgba(180,220,235,.7), transparent), radial-gradient(1200px 600px at 50% -10%, rgba(95,224,230,.12), transparent 70%), radial-gradient(900px 500px at 80% 110%, rgba(240,168,82,.07), transparent 70%); animation:sp-tw 5s ease-in-out infinite;"></div>
+
+    <!-- 3D world -->
+    <div id="world" style="position:absolute; inset:0; z-index:2; transform-style:preserve-3d; will-change:transform;">
+
+      <div aria-hidden="true" style="position:absolute; left:-30%; right:-30%; bottom:-6%; height:75%; transform:rotateX(76deg) translateZ(-160px); transform-origin:bottom center; background-image:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size:80px 80px; animation:sp-grid 4.5s linear infinite; -webkit-mask-image:linear-gradient(to top, #000 5%, transparent 78%); mask-image:linear-gradient(to top, #000 5%, transparent 78%);"></div>
+
+      <div style="position:absolute; left:9%; top:14%; transform:translateZ(10px); font-size:9.5px; letter-spacing:0.22em; color:var(--muted);">— SECTOR A · APPS &amp; TOOLS</div>
+      <div style="position:absolute; right:8%; bottom:18%; transform:translateZ(10px); font-size:9.5px; letter-spacing:0.22em; color:var(--muted); text-align:right;">SECTOR B · AI AGENTS —</div>
+
+      <!-- identity core -->
+      <div style="position:absolute; left:50%; top:47%; transform:translate(-50%,-50%) translateZ(20px); width:226px; height:226px;">
+        <div aria-hidden="true" style="position:absolute; inset:0; border-radius:50%; border:1px solid rgba(95,224,230,.30); background:radial-gradient(circle, rgba(95,224,230,.05), transparent 60%);"></div>
+        <div aria-hidden="true" style="position:absolute; inset:26px; border-radius:50%; border:1px dashed rgba(95,224,230,.22); animation:sp-spin 22s linear infinite;"></div>
+        <div aria-hidden="true" style="position:absolute; inset:58px; border-radius:50%; border:1px solid rgba(240,168,82,.28);"></div>
+        <div aria-hidden="true" style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 0deg, rgba(95,224,230,.30), transparent 28%); -webkit-mask:radial-gradient(circle, transparent 54%, #000 55%); mask:radial-gradient(circle, transparent 54%, #000 55%); animation:sp-radar 4s linear infinite;"></div>
+        <div aria-hidden="true" style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(95,224,230,.14); transform:translateX(-50%);"></div>
+        <div aria-hidden="true" style="position:absolute; top:50%; left:0; right:0; height:1px; background:rgba(95,224,230,.14); transform:translateY(-50%);"></div>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; text-align:center;">
+          <div style="font-size:26px; letter-spacing:0.12em; color:#EAF6F8; text-shadow:0 0 18px rgba(95,224,230,.45);">siya</div>
+          <div style="font-size:8.5px; letter-spacing:0.26em; color:var(--accent);">SOFTWARE · DANCE · AI</div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:8px; letter-spacing:0.16em; color:var(--muted); margin-top:2px;"><span style="width:5px;height:5px;border-radius:50%;background:#39d98a; box-shadow:0 0 8px #39d98a; animation:sp-blink 1.6s infinite;"></span>ONLINE</div>
+        </div>
+      </div>
+
+      <!-- project nodes injected here -->
+      <div id="nodes"></div>
+
+    </div>
+
+    <!-- HUD chrome (flat overlay) -->
+    <div aria-hidden="true" style="position:absolute; inset:0; z-index:8; pointer-events:none;">
+      <div style="position:absolute; inset:18px; border:1px solid rgba(120,180,210,.08);"></div>
+      <div style="position:absolute; left:14px; top:14px; width:18px; height:18px; border-left:1px solid var(--accent); border-top:1px solid var(--accent);"></div>
+      <div style="position:absolute; right:14px; top:14px; width:18px; height:18px; border-right:1px solid var(--accent); border-top:1px solid var(--accent);"></div>
+      <div style="position:absolute; left:14px; bottom:14px; width:18px; height:18px; border-left:1px solid var(--accent); border-bottom:1px solid var(--accent);"></div>
+      <div style="position:absolute; right:14px; bottom:14px; width:18px; height:18px; border-right:1px solid var(--accent); border-bottom:1px solid var(--accent);"></div>
+      <div style="position:absolute; inset:0; background:repeating-linear-gradient(0deg, rgba(95,224,230,.025) 0 1px, transparent 1px 4px); animation:sp-scan 0.6s steps(3) infinite;"></div>
+    </div>
+
+    <!-- top bar -->
+    <header style="position:absolute; left:0; right:0; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:26px 34px; font-size:10px; letter-spacing:0.14em; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;"><span style="color:var(--accent);">▮</span><span style="color:#E6F1F6;">SIYA</span><span style="color:var(--muted);">/ PERSONAL&nbsp;INDEX</span></div>
+      <nav style="display:flex; gap:20px;">
+        <a href="#dance" class="nav-a">DANCE</a>
+        <a href="#lab" class="nav-a">LAB</a>
+        <a href="#contact" class="nav-a">CONTACT</a>
+      </nav>
+      <div style="display:flex; align-items:center; gap:16px; color:var(--muted);"><span>LAT 31.23 · LON 121.47</span><span id="clock" style="color:var(--accent);"></span></div>
+    </header>
+
+    <!-- bottom bar -->
+    <footer style="position:absolute; left:0; right:0; bottom:0; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:24px 34px; font-size:9px; letter-spacing:0.16em; color:var(--muted); flex-wrap:wrap;">
+      <span style="display:flex; align-items:center; gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent); box-shadow:0 0 8px var(--accent);"></span>MOVE CURSOR — LOOK AROUND</span>
+      <span style="animation:sp-rise .8s both;"><span id="nodeCount">09</span> NODES ONLINE · SCROLL TO EXPLORE ↓</span>
+    </footer>
+  </section>
+
+  <!-- ============ DANCE ============ -->
+  <section id="dance" style="position:relative; padding:84px 34px 70px; max-width:1180px; margin:0 auto;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:30px;">
+      <span style="font-size:10px; letter-spacing:0.2em; color:var(--warm);">03</span>
+      <h2 style="margin:0; font-size:11px; letter-spacing:0.26em; color:#E6F1F6; font-weight:500;">DANCE&nbsp;·&nbsp;CLIPS</h2>
+      <span style="flex:1; height:1px; background:var(--line);"></span>
+      <span style="font-size:9px; letter-spacing:0.16em; color:var(--muted);">DROP YOUR CLIPS ↓</span>
+    </div>
+    <div id="danceRow" style="display:flex; gap:20px; overflow-x:auto; padding:6px 2px 16px; perspective:1100px;"></div>
+  </section>
+
+  <!-- ============ LAB / ARTIFACT ============ -->
+  <section id="lab" style="position:relative; padding:14px 34px 70px; max-width:1180px; margin:0 auto;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:24px;">
+      <span style="font-size:10px; letter-spacing:0.2em; color:var(--accent);">04</span>
+      <h2 style="margin:0; font-size:11px; letter-spacing:0.26em; color:#E6F1F6; font-weight:500;">CLAUDE&nbsp;ARTIFACTS</h2>
+      <span style="flex:1; height:1px; background:var(--line);"></span>
+      <span style="font-size:9px; letter-spacing:0.16em; color:var(--muted);">LIVE&nbsp;EMBED</span>
+    </div>
+    <div style="position:relative; border:1px solid var(--line); background:var(--panel); box-shadow:0 0 60px -30px rgba(95,224,230,.4);">
+      <div aria-hidden="true" style="position:absolute; left:-1px; top:-1px; width:16px;height:16px; border-left:1px solid var(--accent); border-top:1px solid var(--accent);"></div>
+      <div aria-hidden="true" style="position:absolute; right:-1px; bottom:-1px; width:16px;height:16px; border-right:1px solid var(--accent); border-bottom:1px solid var(--accent);"></div>
+      <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line); font-size:10px; letter-spacing:0.08em; color:var(--muted);">
+        <span style="display:flex; gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent);"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--warm);"></span><span style="width:8px;height:8px;border-radius:50%;background:#39d98a;"></span></span>
+        <span>deep-learning-signal-map</span>
+        <a href="https://claude.site/public/artifacts/e621d8b9-58e0-41a5-92ee-ae30062e91a8/embed" target="_blank" rel="noopener" style="margin-left:auto; color:var(--accent); text-decoration:none;">OPEN ↗</a>
+      </div>
+      <iframe src="https://claude.site/public/artifacts/e621d8b9-58e0-41a5-92ee-ae30062e91a8/embed" title="deep-learning-signal-map" width="100%" height="540" frameborder="0" allow="clipboard-write" allowfullscreen style="display:block; border:0; width:100%; background:#0a0e18;"></iframe>
+    </div>
+    <p style="margin:14px 2px 0; font-size:9.5px; letter-spacing:0.1em; color:var(--muted);">+ MORE ARTIFACTS INCOMING</p>
+  </section>
+
+  <!-- ============ CONTACT ============ -->
+  <footer id="contact" style="position:relative; max-width:1180px; margin:0 auto; padding:36px 34px 60px; border-top:1px solid var(--line); display:flex; align-items:flex-end; justify-content:space-between; gap:28px; flex-wrap:wrap;">
+    <div>
+      <div style="font-size:22px; letter-spacing:0.08em; color:#EAF6F8; margin-bottom:14px;">// LET'S BUILD</div>
+      <div style="display:flex; gap:18px; flex-wrap:wrap; font-size:10px; letter-spacing:0.12em;">
+        <a href="mailto:hi@siyayan.com" class="nav-a">EMAIL</a>
+        <a href="https://github.com/" target="_blank" rel="noopener" class="nav-a">GITHUB</a>
+        <a href="https://portfolio.siyayan.com/" target="_blank" rel="noopener" class="nav-a">PORTFOLIO</a>
+        <a href="#dance" class="nav-a">INSTAGRAM</a>
+      </div>
+    </div>
+    <div style="text-align:right; font-size:9px; letter-spacing:0.1em; color:var(--muted); line-height:1.8;">
+      <div>BUILT &amp; DESIGNED BY SIYA</div>
+      <div>© 2026 — MORE TO COME</div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  function shot(u){ return 'https://image.thum.io/get/width/900/crop/1100/' + u; }
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+
+  // [name, tag, url, left%, top%, zPx]
+  var data = [
+    ['FluentFlow','English',  'https://fluentflow.siyayan.com/',       16, 24,  70],
+    ['PTE Writer','English',  'https://ptewriter.siyayan.com/',        11, 56,  30],
+    ['Podcast Learner','Learning','https://podcastlearner.siyayan.com/',26, 82, 110],
+    ['Habital','Habits',      'https://habital.siyayan.com/',          49, 15,  50],
+    ['Action Planner','Plan', 'https://actionplanner.siyayan.com/',    75, 23,  90],
+    ['CityLens','Travel',     'https://citylens.siyayan.com/',         87, 52,  30],
+    ['FurniSnap','Home',      'https://furnisnap.siyayan.com/',        80, 81, 120],
+    ['AskMyDoc','Agent',      'https://askmydoc.siyayan.com/',         50, 85,  60],
+    ['Invoice Extractor','Flow','https://invoice-extractor.siyayan.com/',30, 41, 140],
+  ];
+
+  document.getElementById('nodes').innerHTML = data.map(function(d, i){
+    var name=d[0], tag=d[1], url=d[2], x=d[3], y=d[4], z=d[5];
+    var style = 'position:absolute; left:'+x+'%; top:'+y+'%; width:154px; transform:translate(-50%,-50%) translateZ('+z+'px); border:1px solid var(--line); border-radius:7px; background:var(--panel); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); text-decoration:none; color:var(--fg); overflow:hidden; will-change:transform;';
+    var bob = 'animation:sp-bob '+(5+(i%4))+'s ease-in-out infinite; animation-delay:'+(i*-0.6).toFixed(1)+'s;';
+    return '<a href="'+url+'" target="_blank" rel="noopener" class="node" style="'+style+'">'
+      + '<div style="'+bob+'">'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-bottom:1px solid var(--line); font-size:8.5px; letter-spacing:0.12em; color:var(--muted);"><span style="display:flex; align-items:center; gap:5px;"><span style="width:4px;height:4px;border-radius:50%;background:var(--accent); box-shadow:0 0 6px var(--accent);"></span>'+pad(i+1)+'</span><span style="color:var(--accent);">↗</span></div>'
+      + '<div style="position:relative; height:88px; overflow:hidden; border-bottom:1px solid var(--line); background:#0a0e18;"><img src="'+shot(url)+'" alt="'+name+'" loading="lazy" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:top center; opacity:.92;"><div aria-hidden="true" style="position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode:overlay;"></div><div aria-hidden="true" style="position:absolute; left:6px; top:6px; width:8px; height:8px; border-left:1px solid var(--accent); border-top:1px solid var(--accent); opacity:.6;"></div><div aria-hidden="true" style="position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-right:1px solid var(--accent); border-bottom:1px solid var(--accent); opacity:.6;"></div></div>'
+      + '<div style="display:flex; align-items:baseline; justify-content:space-between; gap:6px; padding:7px 8px 8px;"><span style="font-size:11px; letter-spacing:0.02em; color:#E6F1F6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+name+'</span><span style="font-size:7.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); flex:0 0 auto;">'+tag+'</span></div>'
+      + '</div></a>';
+  }).join('');
+  document.getElementById('nodeCount').textContent = pad(data.length);
+
+  var danceTiles = [
+    { id:'dance-1', label:'HIP-HOP' },
+    { id:'dance-2', label:'FREESTYLE' },
+    { id:'dance-3', label:'CHOREO' },
+    { id:'dance-4', label:'STAGE' },
+  ];
+  document.getElementById('danceRow').innerHTML = danceTiles.map(function(tile){
+    return '<div class="dance-tile" style="position:relative; flex:0 0 auto; width:204px; height:316px; border:1px solid var(--line); background:var(--panel); overflow:hidden; transform:rotateY(8deg);">'
+      + '<div class="slot" style="position:absolute; inset:0; width:100%; height:100%;">Drop dance clip</div>'
+      + '<div aria-hidden="true" style="position:absolute; left:8px; top:8px; width:12px;height:12px; border-left:1px solid var(--accent); border-top:1px solid var(--accent);"></div>'
+      + '<div style="position:absolute; left:0; right:0; bottom:0; padding:13px; pointer-events:none; background:linear-gradient(to top, rgba(4,7,14,.9), transparent); display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.12em; color:#E6F1F6;"><span style="width:0;height:0;border-left:8px solid var(--accent);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span>'+tile.label+'</div>'
+      + '</div>';
+  }).join('');
+
+  function tick(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+  tick(); setInterval(tick, 1000);
+
+  var world = document.getElementById('world');
+  var tgt = { x:0, y:0 }, cur = { x:0, y:0 };
+  window.addEventListener('mousemove', function(e){
+    var cx = window.innerWidth/2, cy = window.innerHeight/2;
+    tgt.x = (e.clientX - cx)/cx;
+    tgt.y = (e.clientY - cy)/cy;
+  });
+  (function loop(){
+    cur.x += (tgt.x - cur.x) * 0.06;
+    cur.y += (tgt.y - cur.y) * 0.06;
+    var ry = cur.x * 9, rx = -cur.y * 7;
+    world.style.transform = 'rotateX('+rx+'deg) rotateY('+ry+'deg)';
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>
